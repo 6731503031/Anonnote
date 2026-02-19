@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "375833053628",
+    "project_id": "anonnote-47650",
+    "storage_bucket": "anonnote-47650.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375833053628:android:31d50ef9040e8227fbc3b9",
+        "android_client_info": {
+          "package_name": "com.example.anonnote"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwBFF9PdFFXQnX3lz7k7htdEzt7oCqkEs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
