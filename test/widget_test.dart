@@ -11,20 +11,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:anonnote/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('App shows title and settings', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
+    // Allow localization delegates and frames to settle.
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // The localized app title should be visible in one or more places.
+    expect(find.text('AnonNote'), findsWidgets);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Settings icon should be present in the AppBar area.
+    expect(find.byIcon(Icons.settings), findsOneWidget);
   });
 }

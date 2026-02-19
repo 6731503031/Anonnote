@@ -30,6 +30,19 @@ class MyAppState extends State<MyApp> {
   void setThemeMode(ThemeMode mode) => setState(() => themeMode = mode);
   void setLocale(Locale? newLocale) => setState(() => locale = newLocale);
 
+  // Add small debug hooks so Settings actions can be observed in logs.
+  void _debugSetThemeMode(ThemeMode mode) {
+    debugPrint('MyAppState: setThemeMode -> $mode');
+    setThemeMode(mode);
+  }
+
+  void _debugSetLocale(Locale? newLocale) {
+    debugPrint(
+      'MyAppState: setLocale -> ${newLocale?.toLanguageTag() ?? 'system'}',
+    );
+    setLocale(newLocale);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
