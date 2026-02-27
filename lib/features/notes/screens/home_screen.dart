@@ -3,6 +3,7 @@ import '../../../l10n/app_localizations.dart';
 import '../services/note_service.dart';
 import '../models/note_model.dart';
 import 'create_note_screen.dart';
+import 'note_detail_screen.dart';
 import '../../settings/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,13 +17,39 @@ class _HomeScreenState extends State<HomeScreen> {
   String _query = '';
   String? _selectedTag;
 
+  String _previewForContent(dynamic content, {int maxChars = 300}) {
+    // If content is saved as a Quill delta JSON (List of ops), extract insert strings.
+    if (content is List) {
+      final buffer = StringBuffer();
+      for (final op in content) {
+        if (op is Map && op.containsKey('insert')) {
+          final ins = op['insert'];
+          if (ins is String) buffer.write(ins);
+        } else if (op is String) {
+          buffer.write(op);
+        }
+        if (buffer.length > maxChars) break;
+      }
+      final text = buffer.toString().replaceAll('\n', ' ').trim();
+      if (text.length > maxChars) return '${text.substring(0, maxChars)}…';
+      return text;
+    }
+
+    // Otherwise assume it's already a plain string.
+    if (content is String) {
+      final text = content.replaceAll('\n', ' ').trim();
+      return text.length > maxChars ? '${text.substring(0, maxChars)}…' : text;
+    }
+
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final service = NoteService();
     final t = AppLocalizations.of(context)!;
 
     return Scaffold(
-      // We draw a custom background (dark gradient) to match the mock.
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -32,13 +59,11 @@ class _HomeScreenState extends State<HomeScreen> {
               Theme.of(context).colorScheme.surface.withAlpha(230),
               Theme.of(context).colorScheme.surface.withAlpha(210),
             ],
-            stops: const [0.0, 1.0],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // AppBar row
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16.0,
@@ -53,28 +78,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                       ).textTheme.titleLarge?.copyWith(fontSize: 20),
                     ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.settings),
-                          tooltip: t.settings,
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SettingsScreen(),
-                            ),
-                          ),
+                    IconButton(
+                      icon: const Icon(Icons.settings),
+                      tooltip: t.settings,
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              // Hero / header area
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  vertical: 28.0,
+                  vertical: 24.0,
                   horizontal: 24.0,
                 ),
                 child: Column(
@@ -84,7 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       t.appTitle,
                       style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -98,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () => Navigator.push(
                         context,
@@ -106,29 +125,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           builder: (_) => const CreateNoteScreen(),
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 28,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        backgroundColor: Colors.blue[600],
-                      ),
-                      child: Text(
-                        t.createNoteCTA,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: Text(t.createNoteCTA),
                     ),
                   ],
                 ),
               ),
 
-              // Search row
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16.0,
@@ -151,12 +153,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Notes area (stream)
               Expanded(
                 child: Builder(
                   builder: (context) {
-                    // Protect tests and startup from Firebase not being initialized.
-                    // If getting the real stream throws, fall back to an empty list stream.
                     late final Stream<List<NoteModel>> notesStream;
                     try {
                       notesStream = service.getNotes();
@@ -176,13 +175,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         final data = snapshot.data ?? [];
 
-                        // build dynamic tag list for filter menu
-                        final allTags = <String>{};
-                        for (final n in data) {
-                          allTags.addAll(n.tags);
-                        }
-
-                        // Filter notes by query and selected tag
                         final notes = data.where((n) {
                           final matchesQuery =
                               _query.isEmpty ||
@@ -201,201 +193,119 @@ class _HomeScreenState extends State<HomeScreen> {
                           return matchesQuery && matchesTag;
                         }).toList();
 
-                        // Tag chips and grid
-
                         if (notes.isEmpty) {
-                          // Large hero empty state like the provided mock
                           return Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                SizedBox(
-                                  width: 760,
-                                  child: Card(
-                                    color: Colors.transparent,
-                                    elevation: 0,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 40.0,
-                                        horizontal: 24.0,
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          Text(
-                                            t.appTitle,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .displaySmall
-                                                ?.copyWith(
-                                                  fontSize: 48,
-                                                  color: Colors.white,
-                                                ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            t.heroSubtitle,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium
-                                                ?.copyWith(
-                                                  color: Colors.white70,
-                                                ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                          const SizedBox(height: 18),
-                                          ElevatedButton(
-                                            onPressed: () => Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    const CreateNoteScreen(),
-                                              ),
-                                            ),
-                                            style: ElevatedButton.styleFrom(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 36,
-                                                    vertical: 14,
-                                                  ),
-                                              backgroundColor: Colors.blue[600],
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                            child: Text(
-                                              t.createNoteCTA,
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                Text(
+                                  t.noNotes,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const CreateNoteScreen(),
                                     ),
                                   ),
+                                  child: Text(t.createNoteCTA),
                                 ),
                               ],
                             ),
                           );
                         }
 
-                        // Render notes as a responsive grid
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: 8.0,
-                          ),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              int crossAxisCount = 1;
-                              final width = constraints.maxWidth;
-                              if (width > 1200) {
-                                crossAxisCount = 4;
-                              } else if (width > 900) {
-                                crossAxisCount = 3;
-                              } else if (width > 600) {
-                                crossAxisCount = 2;
-                              } else {
-                                crossAxisCount = 1;
-                              }
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            final width = constraints.maxWidth;
+                            int crossAxisCount = 1;
+                            if (width > 1200) {
+                              crossAxisCount = 4;
+                            } else if (width > 900) {
+                              crossAxisCount = 3;
+                            } else if (width > 600) {
+                              crossAxisCount = 2;
+                            }
 
-                              return GridView.builder(
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: crossAxisCount,
-                                      mainAxisSpacing: 12,
-                                      crossAxisSpacing: 12,
-                                      childAspectRatio: 1.2,
-                                    ),
-                                itemCount: notes.length,
-                                itemBuilder: (context, index) {
-                                  final note = notes[index];
-                                  return Card(
-                                    color: Theme.of(
+                            return GridView.builder(
+                              padding: const EdgeInsets.all(12),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: crossAxisCount,
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                    childAspectRatio: 1.2,
+                                  ),
+                              itemCount: notes.length,
+                              itemBuilder: (context, index) {
+                                final note = notes[index];
+                                return Card(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 4,
+                                  child: InkWell(
+                                    onTap: () => Navigator.push(
                                       context,
-                                    ).colorScheme.surface,
-                                    elevation: 6,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: InkWell(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                const CreateNoteScreen(),
-                                          ),
-                                        );
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              note.title.isEmpty
-                                                  ? t.untitledNote
-                                                  : note.title,
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.titleMedium,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Expanded(
-                                              child: Text(
-                                                (note.content is List)
-                                                    ? '[rich text]'
-                                                    : '${note.content}',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium
-                                                    ?.copyWith(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .onSurface
-                                                          .withAlpha(200),
-                                                    ),
-                                                maxLines: 6,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Wrap(
-                                              spacing: 6,
-                                              runSpacing: 6,
-                                              children: note.tags
-                                                  .take(4)
-                                                  .map(
-                                                    (tag) => Chip(
-                                                      label: Text(tag),
-                                                      visualDensity:
-                                                          VisualDensity.compact,
-                                                    ),
-                                                  )
-                                                  .toList(),
-                                            ),
-                                          ],
-                                        ),
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            NoteDetailScreen(note: note),
                                       ),
                                     ),
-                                  );
-                                },
-                              ); // end GridView.builder
-                            }, // end LayoutBuilder builder
-                          ), // end LayoutBuilder
-                        ); // end Padding
-                      }, // end StreamBuilder builder
-                    ); // end StreamBuilder
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            note.title.isEmpty
+                                                ? t.untitledNote
+                                                : note.title,
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.titleMedium,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Expanded(
+                                            child: Text(
+                                              _previewForContent(note.content),
+                                              maxLines: 6,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.bodyMedium,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Wrap(
+                                            spacing: 6,
+                                            children: note.tags
+                                                .take(4)
+                                                .map(
+                                                  (tag) =>
+                                                      Chip(label: Text(tag)),
+                                                )
+                                                .toList(),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    );
                   },
-                ), // end Builder
-              ), // end Expanded
+                ),
+              ),
             ],
           ),
         ),

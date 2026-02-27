@@ -5,6 +5,7 @@ import 'features/notes/screens/home_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Global key to access app-level state (theme/locale) from small settings UI.
 final GlobalKey<MyAppState> appKey = GlobalKey<MyAppState>();
@@ -26,27 +27,56 @@ class MyAppState extends State<MyApp> {
   // Theme and locale are mutable at runtime via settings.
   ThemeMode themeMode = ThemeMode.system;
   Locale? locale;
-
-  void setThemeMode(ThemeMode mode) => setState(() => themeMode = mode);
-  void setLocale(Locale? newLocale) => setState(() => locale = newLocale);
-
-  // Add small debug hooks so Settings actions can be observed in logs.
-  void _debugSetThemeMode(ThemeMode mode) {
-    debugPrint('MyAppState: setThemeMode -> $mode');
-    setThemeMode(mode);
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
   }
 
-  void _debugSetLocale(Locale? newLocale) {
-    debugPrint(
-      'MyAppState: setLocale -> ${newLocale?.toLanguageTag() ?? 'system'}',
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final tm = prefs.getString('themeMode') ?? 'system';
+      final savedLocale = prefs.getString('locale') ?? '';
+      setState(() {
+        themeMode = tm == 'light'
+            ? ThemeMode.light
+            : tm == 'dark'
+            ? ThemeMode.dark
+            : ThemeMode.system;
+        locale = savedLocale.isEmpty ? null : Locale(savedLocale);
+      });
+    } catch (_) {
+      // ignore and keep defaults
+    }
+  }
+
+  void setThemeMode(ThemeMode mode) {
+    setState(() => themeMode = mode);
+    SharedPreferences.getInstance().then(
+      (p) => p.setString(
+        'themeMode',
+        mode == ThemeMode.light
+            ? 'light'
+            : mode == ThemeMode.dark
+            ? 'dark'
+            : 'system',
+      ),
     );
-    setLocale(newLocale);
   }
+
+  void setLocale(Locale? newLocale) {
+    setState(() => locale = newLocale);
+    SharedPreferences.getInstance().then(
+      (p) => p.setString('locale', newLocale?.languageCode ?? ''),
+    );
+  }
+
+  // Debug helpers were removed — use the public setters `setThemeMode` and `setLocale`.
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      key: widget.key,
       debugShowCheckedModeBanner: false,
       locale: locale,
       onGenerateTitle: (context) =>

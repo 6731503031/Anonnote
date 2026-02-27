@@ -31,4 +31,9 @@ class NoteService {
   Future<void> deleteNote(String id) async {
     await _collection.doc(id).delete();
   }
+
+  Future<void> updateNote(NoteModel note) async {
+    if (note.id.isEmpty) return;
+    await _collection.doc(note.id).set(note.toMap());
+  }
 }
