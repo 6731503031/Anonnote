@@ -154,7 +154,21 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
       createdAt: widget.note.createdAt,
     );
 
-    await service.updateNote(note);
-    if (mounted) Navigator.pop(context);
+    try {
+      await service.updateNote(note);
+      if (mounted) {
+        // Inform user of success then close editor.
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Note saved')));
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save note: $e')));
+      }
+    }
   }
 }

@@ -1,0 +1,22 @@
+// Firestore security rules for Anonnote
+// Allow each signed-in user to read/write only their own notes.
+// Deploy with: `firebase deploy --only firestore:rules` (from your Firebase project directory)
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Notes collection: each document must include a `userId` field that
+    // matches the authenticated user's UID.
+    match /notes/{noteId} {
+      // Create: the incoming document (request.resource) must include userId
+      // and it must equal the authenticated user's UID.
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      // Read (get/list), update and delete: only allowed when the stored
+      // document's userId matches the authenticated user's UID.
+      allow read, update, delete: if request.auth != null
+                                   && resource.data.userId == request.auth.uid;
+    }
+  }
+}

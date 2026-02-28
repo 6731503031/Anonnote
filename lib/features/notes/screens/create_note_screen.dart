@@ -3,6 +3,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../../../l10n/app_localizations.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
+import '../services/auth_service.dart';
 
 class CreateNoteScreen extends StatefulWidget {
   const CreateNoteScreen({super.key});
@@ -131,7 +132,17 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
       createdAt: DateTime.now(),
     );
 
-    await service.createNote(note);
-    if (mounted) Navigator.pop(context);
+    final uid = authService.currentUser?.uid;
+    try {
+      await service.createNote(note, userId: uid);
+      if (mounted) Navigator.pop(context);
+    } catch (e, st) {
+      // Basic error handling: show snackbar and log in debug.
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save note')));
+      // ignore: avoid_print
+      print('createNote error: $e\n$st');
+    }
   }
 }

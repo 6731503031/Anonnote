@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'features/notes/screens/home_screen.dart';
+import 'features/notes/services/auth_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// debug badge removed for production
 
 // Global key to access app-level state (theme/locale) from small settings UI.
 final GlobalKey<MyAppState> appKey = GlobalKey<MyAppState>();
@@ -13,6 +16,23 @@ final GlobalKey<MyAppState> appKey = GlobalKey<MyAppState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Ensure anonymous auth happens before the UI is shown so UID is available.
+  try {
+    final existing = authService.currentUser;
+    if (existing == null) {
+      final user = await authService.signInAnonymously();
+      if (kDebugMode) {
+        if (user != null)
+          debugPrint('Auth uid: ${user.uid}');
+        else
+          debugPrint('AuthService: anonymous sign-in returned null');
+      }
+    } else {
+      if (kDebugMode) debugPrint('Using existing uid: ${existing.uid}');
+    }
+  } catch (_) {
+    // ignore errors: auth service returns null on failure.
+  }
   runApp(MyApp(key: appKey));
 }
 
@@ -79,6 +99,7 @@ class MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       locale: locale,
+      // No custom builder in production - use default widget tree.
       onGenerateTitle: (context) =>
           AppLocalizations.of(context)?.appTitle ?? 'AnonNote',
       localizationsDelegates: const [

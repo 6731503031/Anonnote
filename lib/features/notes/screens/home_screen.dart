@@ -5,6 +5,7 @@ import '../models/note_model.dart';
 import 'create_note_screen.dart';
 import 'note_detail_screen.dart';
 import '../../settings/settings_screen.dart';
+// Dev sign-in removed for production
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -158,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   builder: (context) {
                     late final Stream<List<NoteModel>> notesStream;
                     try {
-                      notesStream = service.getNotes();
+                      notesStream = service.getNotesForCurrentUser();
                     } catch (_) {
                       notesStream = Stream.value(<NoteModel>[]);
                     }
@@ -170,6 +171,34 @@ class _HomeScreenState extends State<HomeScreen> {
                             ConnectionState.waiting) {
                           return const Center(
                             child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          final errText =
+                              snapshot.error?.toString() ?? 'Unknown error';
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Failed to load notes',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleLarge,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(errText, textAlign: TextAlign.center),
+                                  const SizedBox(height: 12),
+                                  ElevatedButton(
+                                    onPressed: () => setState(() {}),
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            ),
                           );
                         }
 
