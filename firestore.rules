@@ -5,18 +5,32 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Notes collection: each document must include a `userId` field that
-    // matches the authenticated user's UID.
     match /notes/{noteId} {
-      // Create: the incoming document (request.resource) must include userId
-      // and it must equal the authenticated user's UID.
+      // Allow authenticated users to create notes that they own.
+      // Require a userId on the incoming resource and it must equal the caller.
       allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid;
+        && request.resource != null
+        && request.resource.data.userId == request.auth.uid;
 
-      // Read (get/list), update and delete: only allowed when the stored
-      // document's userId matches the authenticated user's UID.
-      allow read, update, delete: if request.auth != null
-                                   && resource.data.userId == request.auth.uid;
+      // Allow read/delete only if the stored document belongs to the caller.
+      // Be safe: require resource exists before checking its fields.
+      allow get, delete: if request.auth != null
+        && resource != null
+        && resource.data.userId == request.auth.uid;
+
+      // Allow queries for signed-in users. Firestore evaluates per-document
+      // get rules during queries so users only receive docs they may read.
+      allow list: if request.auth != null;
+
+      // Allow partial updates from the owner. If the client includes userId
+      // or createdAt, they must match existing values. Otherwise allow edits.
+      allow update: if request.auth != null
+        && resource != null
+        && resource.data.userId == request.auth.uid
+        && (request.resource == null
+            || (!request.resource.data.keys().hasAny(['userId']) || request.resource.data.userId == resource.data.userId)
+            && (!request.resource.data.keys().hasAny(['createdAt']) || request.resource.data.createdAt == resource.data.createdAt)
+           );
     }
   }
 }

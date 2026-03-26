@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:math' show min;
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../../../l10n/app_localizations.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
+import '../services/auth_service.dart';
 
 class EditNoteScreen extends StatefulWidget {
   final NoteModel note;
@@ -64,8 +66,13 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final mq = MediaQuery.of(context);
+    final screenWidth = mq.size.width;
+    final containerWidth = min(800, screenWidth - 32).toDouble();
+    final bottomInset = mq.viewInsets.bottom;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text(t.createNote),
@@ -77,84 +84,102 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              controller: titleController,
-              decoration: InputDecoration(
-                hintText: t.titleHint,
-                border: const OutlineInputBorder(),
-                filled: true,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: TextField(
-              controller: tagController,
-              decoration: InputDecoration(
-                hintText: t.tagsHint,
-                border: const OutlineInputBorder(),
-                filled: true,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // Toolbar
-          quill.QuillSimpleToolbar(controller: _controller),
-
-          // Editor
-          Expanded(
-            child: Center(
-              child: Container(
-                width: 800,
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(blurRadius: 8, color: Colors.black.withAlpha(26)),
-                  ],
-                  borderRadius: BorderRadius.circular(8),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextField(
+                controller: titleController,
+                style: const TextStyle(color: Colors.black),
+                decoration: InputDecoration(
+                  hintText: t.titleHint,
+                  border: const OutlineInputBorder(),
+                  filled: true,
                 ),
-                child: quill.QuillEditor(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  scrollController: _scrollController,
-                  config: const quill.QuillEditorConfig(
-                    autoFocus: false,
-                    expands: true,
-                    padding: EdgeInsets.zero,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: TextField(
+                controller: tagController,
+                style: const TextStyle(color: Colors.black),
+                decoration: InputDecoration(
+                  hintText: t.tagsHint,
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Toolbar
+            quill.QuillSimpleToolbar(controller: _controller),
+
+            // Editor — put editor in an Expanded container and let it expand
+            // to a bounded height so its internal widgets can layout.
+            Expanded(
+              child: Center(
+                child: Container(
+                  width: containerWidth,
+                  margin: const EdgeInsets.all(16),
+                  padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        blurRadius: 8,
+                        color: Colors.black.withAlpha(26),
+                      ),
+                    ],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DefaultTextStyle(
+                    style: const TextStyle(color: Colors.black),
+                    child: quill.QuillEditor(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      scrollController: _scrollController,
+                      config: quill.QuillEditorConfig(
+                        autoFocus: false,
+                        expands: true,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   void _saveNote() async {
-    final tags = tagController.text
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-
-    final note = NoteModel(
-      id: widget.note.id,
-      title: titleController.text.trim(),
-      tags: tags,
-      content: _controller.document.toDelta().toJson(),
-      createdAt: widget.note.createdAt,
-    );
-
     try {
+      final tags = tagController.text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+
+      final contentJson = _controller.document.toDelta().toJson();
+
+      final note = NoteModel(
+        id: widget.note.id,
+        title: titleController.text.trim(),
+        tags: tags,
+        content: contentJson,
+        createdAt: widget.note.createdAt,
+      );
+
+      // Ensure we are signed in before attempting an update (rules require auth).
+      if (authService.currentUser == null) {
+        await authService.signInAnonymously();
+      }
+
       await service.updateNote(note);
       if (mounted) {
         // Inform user of success then close editor.
@@ -169,6 +194,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('Failed to save note: $e')));
       }
+      // error surfaced to user; no console debug print in production.
     }
   }
 }

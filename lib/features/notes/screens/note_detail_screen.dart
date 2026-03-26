@@ -5,19 +5,43 @@ import '../models/note_model.dart';
 import '../services/note_service.dart';
 import 'edit_note_screen.dart';
 
-class NoteDetailScreen extends StatelessWidget {
+class NoteDetailScreen extends StatefulWidget {
   final NoteModel note;
   const NoteDetailScreen({super.key, required this.note});
 
   @override
+  State<NoteDetailScreen> createState() => _NoteDetailScreenState();
+}
+
+class _NoteDetailScreenState extends State<NoteDetailScreen> {
+  late NoteModel _note;
+  final service = NoteService();
+
+  @override
+  void initState() {
+    super.initState();
+    _note = widget.note;
+  }
+
+  Future<void> _reloadNote() async {
+    try {
+      final fresh = await service.getNoteById(_note.id);
+      if (fresh != null) {
+        setState(() => _note = fresh);
+      }
+    } catch (_) {
+      // ignore errors; keep showing existing note
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final service = NoteService();
-
+    // Build a controller for the current note content to extract plain text
     quill.QuillController controller;
-    if (note.content is List) {
+    if (_note.content is List) {
       try {
-        final doc = quill.Document.fromJson(note.content as List);
+        final doc = quill.Document.fromJson(_note.content as List);
         controller = quill.QuillController(
           document: doc,
           selection: const TextSelection.collapsed(offset: 0),
@@ -25,8 +49,8 @@ class NoteDetailScreen extends StatelessWidget {
       } catch (_) {
         controller = quill.QuillController.basic();
       }
-    } else if (note.content is String) {
-      final doc = quill.Document()..insert(0, note.content as String);
+    } else if (_note.content is String) {
+      final doc = quill.Document()..insert(0, _note.content as String);
       controller = quill.QuillController(
         document: doc,
         selection: const TextSelection.collapsed(offset: 0),
@@ -37,16 +61,18 @@ class NoteDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(note.title.isEmpty ? t.untitledNote : note.title),
+        title: Text(_note.title.isEmpty ? t.untitledNote : _note.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
             tooltip: 'Edit',
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              // Await the edit screen and then refresh the note from server.
+              await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => EditNoteScreen(note: note)),
+                MaterialPageRoute(builder: (_) => EditNoteScreen(note: _note)),
               );
+              await _reloadNote();
             },
           ),
           IconButton(
@@ -76,7 +102,7 @@ class NoteDetailScreen extends StatelessWidget {
               );
 
               if (ok == true) {
-                await service.deleteNote(note.id);
+                await service.deleteNote(_note.id);
                 if (canPopBeforeDialog) navigator.pop();
               }
             },
@@ -90,7 +116,7 @@ class NoteDetailScreen extends StatelessWidget {
           children: [
             Wrap(
               spacing: 8,
-              children: note.tags.map((t) => Chip(label: Text(t))).toList(),
+              children: _note.tags.map((t) => Chip(label: Text(t))).toList(),
             ),
             const SizedBox(height: 12),
             Expanded(

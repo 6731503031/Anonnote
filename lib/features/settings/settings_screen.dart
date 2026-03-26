@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../main.dart';
+import 'package:flutter/foundation.dart';
+import '../notes/services/auth_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -27,6 +29,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _ => 'system',
       },
     };
+  }
+
+  Future<void> _refreshAuthUid() async {
+    final user = await authService.signInAnonymously();
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          user != null ? 'Signed in: ${user.uid}' : 'Sign-in failed',
+        ),
+      ),
+    );
   }
 
   @override
@@ -71,6 +86,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
               },
             ),
+            const Divider(),
+
+            // Debug: show current auth UID when running in debug mode.
+            if (kDebugMode)
+              Card(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: ListTile(
+                  title: const Text('Auth UID (debug)'),
+                  subtitle: Text(
+                    authService.currentUser?.uid ?? 'not signed in',
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Refresh / sign-in anonymously',
+                    onPressed: _refreshAuthUid,
+                  ),
+                ),
+              ),
 
             const Divider(),
 

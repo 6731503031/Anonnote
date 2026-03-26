@@ -22,13 +22,16 @@ void main() async {
     if (existing == null) {
       final user = await authService.signInAnonymously();
       if (kDebugMode) {
-        if (user != null)
+        if (user != null) {
           debugPrint('Auth uid: ${user.uid}');
-        else
+        } else {
           debugPrint('AuthService: anonymous sign-in returned null');
+        }
       }
     } else {
-      if (kDebugMode) debugPrint('Using existing uid: ${existing.uid}');
+      if (kDebugMode) {
+        debugPrint('Using existing uid: ${existing.uid}');
+      }
     }
   } catch (_) {
     // ignore errors: auth service returns null on failure.

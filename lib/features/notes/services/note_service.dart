@@ -13,10 +13,20 @@ class NoteService {
   /// The service will set `createdAt` to Firestore `Timestamp.now()` to keep
   /// server/storage consistent.
   Future<void> createNote(NoteModel note, {String? userId}) async {
-    final map = Map<String, dynamic>.from(note.toMap());
-    map['createdAt'] = Timestamp.now();
-    if (userId != null) map['userId'] = userId;
-    await _collection.add(map);
+    final contentJson = note.content;
+
+    final payload = {
+      'title': note.title,
+      'tags': note.tags,
+      'content': contentJson, // This should be the List<dynamic> from Quill
+      'createdAt':
+          FieldValue.serverTimestamp(), // Use server timestamp for consistency
+      'userId': userId,
+    };
+
+    // Payload logging removed for production.
+
+    await _collection.add(payload);
   }
 
   // Removed global getNotes() to enforce per-user access. Use
@@ -57,6 +67,15 @@ class NoteService {
 
   Future<void> deleteNote(String id) async {
     await _collection.doc(id).delete();
+  }
+
+  /// Fetch a single note by id once. Returns null if not found or no access.
+  Future<NoteModel?> getNoteById(String id) async {
+    final doc = await _collection.doc(id).get();
+    if (!doc.exists) return null;
+    final data = doc.data() as Map<String, dynamic>?;
+    if (data == null) return null;
+    return NoteModel.fromMap(data, doc.id);
   }
 
   Future<void> updateNote(NoteModel note) async {
