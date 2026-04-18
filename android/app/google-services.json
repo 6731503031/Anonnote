@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:375833053628:android:457d4c715c3d58d1fbc3b9",
+        "android_client_info": {
+          "package_name": "com.anonnote.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwBFF9PdFFXQnX3lz7k7htdEzt7oCqkEs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:375833053628:android:31d50ef9040e8227fbc3b9",
         "android_client_info": {
           "package_name": "com.example.anonnote"
