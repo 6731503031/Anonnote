@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' show min;
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../../../l10n/app_localizations.dart';
 import '../models/note_model.dart';
@@ -17,6 +16,8 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   final titleController = TextEditingController();
   final tagController = TextEditingController();
   final service = NoteService();
+  DateTime? _expireAt;
+  bool _isHidden = false;
 
   late quill.QuillController _controller;
   late FocusNode _focusNode;
@@ -44,8 +45,6 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final mq = MediaQuery.of(context);
-    final screenWidth = mq.size.width;
-    final containerWidth = min(800, screenWidth - 32).toDouble();
     final bottomInset = mq.viewInsets.bottom;
 
     return Scaffold(
@@ -88,6 +87,44 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
                 ),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: SwitchListTile(
+                title: const Text('Hidden Note'),
+                subtitle: const Text('Require PIN to open from the note list'),
+                value: _isHidden,
+                onChanged: (value) => setState(() => _isHidden = value),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.timer_outlined),
+                title: const Text('Self-destruct'),
+                subtitle: Text(
+                  _expireAt == null
+                      ? 'No expiry set'
+                      : 'Expires: ${_expireAt!.toLocal()}',
+                ),
+                trailing: Wrap(
+                  spacing: 8,
+                  children: [
+                    if (_expireAt != null)
+                      IconButton(
+                        tooltip: 'Clear expiry',
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => setState(() => _expireAt = null),
+                      ),
+                    IconButton(
+                      tooltip: 'Pick expiry date/time',
+                      icon: const Icon(Icons.edit_calendar_outlined),
+                      onPressed: _pickExpiry,
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
             const SizedBox(height: 10),
 
@@ -102,32 +139,27 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
             // Editor (Paper style) — give the editor a bounded height by letting
             // it expand within the remaining space (no SingleChildScrollView).
             Expanded(
-              child: Center(
-                child: Container(
-                  width: containerWidth,
-                  margin: const EdgeInsets.all(16),
-                  padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        blurRadius: 8,
-                        color: Colors.black.withAlpha(26),
-                      ),
-                    ],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DefaultTextStyle(
-                    style: const TextStyle(color: Colors.black),
-                    child: quill.QuillEditor(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      scrollController: _scrollController,
-                      config: quill.QuillEditorConfig(
-                        autoFocus: true,
-                        expands: true,
-                        padding: EdgeInsets.zero,
-                      ),
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(blurRadius: 8, color: Colors.black.withAlpha(26)),
+                  ],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DefaultTextStyle(
+                  style: const TextStyle(color: Colors.black),
+                  child: quill.QuillEditor(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    scrollController: _scrollController,
+                    config: quill.QuillEditorConfig(
+                      autoFocus: false,
+                      expands: true,
+                      padding: EdgeInsets.zero,
                     ),
                   ),
                 ),
@@ -155,6 +187,10 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
         tags: tags,
         content: contentJson,
         createdAt: DateTime.now(),
+        expireAt: _expireAt,
+        isHidden: _isHidden,
+        isFavorite: false,
+        isPublic: false,
       );
 
       // Ensure we have an authenticated user before attempting to write.
@@ -195,5 +231,41 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
       }
       // Errors are surfaced to the user via SnackBar; keep logs out of prod.
     }
+  }
+
+  Future<void> _pickExpiry() async {
+    final now = DateTime.now();
+    final base = _expireAt ?? now.add(const Duration(hours: 1));
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: base,
+      firstDate: now,
+      lastDate: DateTime(now.year + 10),
+    );
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(base),
+    );
+    if (pickedTime == null || !mounted) return;
+
+    final selected = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    if (!selected.isAfter(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Expiry must be in the future')),
+      );
+      return;
+    }
+
+    setState(() => _expireAt = selected);
   }
 }

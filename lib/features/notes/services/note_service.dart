@@ -21,7 +21,13 @@ class NoteService {
       'content': contentJson, // This should be the List<dynamic> from Quill
       'createdAt':
           FieldValue.serverTimestamp(), // Use server timestamp for consistency
+      'expireAt': note.expireAt != null
+          ? Timestamp.fromDate(note.expireAt!)
+          : null,
       'userId': userId,
+      'isHidden': note.isHidden,
+      'isFavorite': note.isFavorite,
+      'isPublic': note.isPublic,
     };
 
     // Payload logging removed for production.
@@ -69,6 +75,18 @@ class NoteService {
     await _collection.doc(id).delete();
   }
 
+  /// Deletes multiple notes in a single batch operation.
+  Future<void> deleteNotesByIds(Iterable<String> ids) async {
+    final toDelete = ids.where((id) => id.trim().isNotEmpty).toSet().toList();
+    if (toDelete.isEmpty) return;
+
+    final batch = FirebaseFirestore.instance.batch();
+    for (final id in toDelete) {
+      batch.delete(_collection.doc(id));
+    }
+    await batch.commit();
+  }
+
   /// Fetch a single note by id once. Returns null if not found or no access.
   Future<NoteModel?> getNoteById(String id) async {
     final doc = await _collection.doc(id).get();
@@ -76,6 +94,40 @@ class NoteService {
     final data = doc.data() as Map<String, dynamic>?;
     if (data == null) return null;
     return NoteModel.fromMap(data, doc.id);
+  }
+
+  /// Fetch a single note for public sharing.
+  /// Returns null when note does not exist or is not public.
+  Future<NoteModel?> getPublicNoteById(String id) async {
+    final doc = await _collection.doc(id).get();
+    if (!doc.exists) return null;
+    final data = doc.data() as Map<String, dynamic>?;
+    if (data == null) return null;
+    if (data['isPublic'] != true) return null;
+    final note = NoteModel.fromMap(data, doc.id);
+    if (note.isExpired) return null;
+    return note;
+  }
+
+  /// Deletes expired notes for the current signed-in user.
+  /// Intended to run on app startup as a lightweight cleanup.
+  Future<void> deleteExpiredNotesForCurrentUser() async {
+    final uid = authService.currentUser?.uid;
+    if (uid == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('notes')
+        .where('userId', isEqualTo: uid)
+        .where('expireAt', isLessThanOrEqualTo: Timestamp.now())
+        .get();
+
+    if (snapshot.docs.isEmpty) return;
+
+    final batch = FirebaseFirestore.instance.batch();
+    for (final doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
   }
 
   Future<void> updateNote(NoteModel note) async {
@@ -89,6 +141,12 @@ class NoteService {
       'title': note.title,
       'tags': note.tags,
       'content': note.content,
+      'expireAt': note.expireAt != null
+          ? Timestamp.fromDate(note.expireAt!)
+          : null,
+      'isHidden': note.isHidden,
+      'isFavorite': note.isFavorite,
+      'isPublic': note.isPublic,
     });
   }
 }

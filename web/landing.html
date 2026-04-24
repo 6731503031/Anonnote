@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AnonNote</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 56px;
+            margin-bottom: 15px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            margin-top: 80px;
+            margin-bottom: 30px;
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        p {
+            color: #cbd5e1;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 120px 20px 80px;
+            background: radial-gradient(circle at center, rgba(34, 197, 94, 0.1) 0%, transparent 70%);
+            border-radius: 20px;
+            margin-bottom: 40px;
+        }
+
+        .hero-logo {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: #a1e4cb;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 40px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 16px 36px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+            font-size: 16px;
+        }
+
+        .btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 12px 28px rgba(59, 130, 246, 0.4);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-top: 40px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+            padding: 30px;
+            border-radius: 16px;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(34, 197, 94, 0.5);
+            box-shadow: 0 20px 40px rgba(34, 197, 94, 0.15);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+
+        .card-icon {
+            font-size: 28px;
+        }
+
+        .section-description {
+            font-size: 16px;
+            margin-top: 20px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 100px;
+            padding-top: 40px;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .screenshots {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 40px;
+        }
+
+        .screenshot-container {
+            width: 340px;
+            aspect-ratio: 9/16;
+            padding: 6px;
+            border-radius: 20px;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .screenshots img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease;
+            display: block;
+        }
+
+        .screenshots img:hover {
+            transform: scale(1.03);
+        }
+
+        .screenshot-container:nth-child(2) {
+            transform: scale(1.1);
+            z-index: 2;
+        }
+
+        .screenshot-container {
+            transition: all 0.3s ease;
+        }
+
+        .screenshot-container:hover {
+            transform: translateY(-6px) scale(1.05);
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.1));
+            padding: 30px;
+            border-radius: 16px;
+            border-left: 4px solid #22c55e;
+            margin: 30px 0;
+        }
+
+        /* Navigation Styles */
+        nav {
+            position: sticky;
+            top: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+            z-index: 1000;
+            padding: 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+        }
+
+        .nav-logo {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-menu a {
+            color: #cbd5e1;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-menu a:hover {
+            color: #22c55e;
+        }
+
+        .nav-menu a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            transition: width 0.3s ease;
+        }
+
+        .nav-menu a:hover::after {
+            width: 100%;
+        }
+
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+                position: absolute;
+                top: 70px;
+                left: 0;
+                right: 0;
+                background: rgba(15, 23, 42, 0.98);
+                flex-direction: column;
+                gap: 15px;
+                padding: 20px;
+                border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+            }
+
+            .nav-menu.active {
+                display: flex;
+            }
+
+            .menu-toggle {
+                display: block;
+            }
+
+            .nav-container {
+                height: auto;
+                padding: 15px 20px;
+            }
+
+            h1 {
+                font-size: 40px;
+            }
+
+            h2 {
+                font-size: 26px;
+            }
+
+            .hero {
+                padding: 80px 20px 60px;
+            }
+
+            .hero p {
+                font-size: 18px;
+            }
+
+            .btn {
+                padding: 14px 28px;
+                font-size: 14px;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .screenshots {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 40px;
+            }
+
+            h2 {
+                font-size: 26px;
+            }
+
+            .hero {
+                padding: 80px 20px 60px;
+            }
+
+            .hero p {
+                font-size: 18px;
+            }
+
+            .btn {
+                padding: 14px 28px;
+                font-size: 14px;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .screenshots {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navigation Menu -->
+    <nav>
+        <div class="nav-container">
+            <a href="#home" class="nav-logo">
+                <img src="logo.png" alt="AnonNote Logo">
+                AnonNote
+            </a>
+            <button class="menu-toggle" id="menuToggle">☰</button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#preview">App Preview</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#download">Download</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero" id="home">
+        <img src="logo.png" alt="AnonNote Logo" class="hero-logo">
+        <h1>AnonNote</h1>
+        <p>Write freely. Stay anonymous.</p>
+        <p style="font-size: 16px; color: #94a3b8; margin-top: 10px;">Your thoughts, your privacy, your control</p>
+        <div class="btn-group">
+            <a href="https://anonnote-47650.web.app/" class="btn" target="_blank">
+                🚀 Get Started
+            </a>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <h2 id="features">✨ Features</h2>
+        <div class="features">
+            <div class="card">
+                <div class="card-icon">📝</div>
+                <div class="card-title">Rich Text Editor</div>
+                <p>Format your notes with bold, italic, lists, and more</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">🏷️</div>
+                <div class="card-title">Tag Organization</div>
+                <p>Organize and categorize your notes with custom tags</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">🔍</div>
+                <div class="card-title">Instant Search</div>
+                <p>Find your notes in milliseconds with powerful search</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">🌗</div>
+                <div class="card-title">Smart Themes</div>
+                <p>Light, Dark, or System theme that matches your preference</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">🌏</div>
+                <div class="card-title">Multi-Language</div>
+                <p>Full support for English and Thai languages</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">⚡</div>
+                <div class="card-title">Lightning Fast</div>
+                <p>Optimized performance for a smooth, responsive experience</p>
+            </div>
+        </div>
+
+        <h2 id="preview">📱 App Preview</h2>
+
+        <div class="screenshots">
+            <div class="screenshot-container">
+                <img src="home.png" alt="Home Screen">
+            </div>
+            <div class="screenshot-container">
+                <img src="Create.png" alt="Create Note">
+            </div>
+            <div class="screenshot-container">
+                <img src="detail.png" alt="Note Detail">
+            </div>
+        </div>
+        <h2 id="about">📖 About</h2>
+        <div class="highlight">
+            <h3 style="font-size: 20px; margin-bottom: 15px;">🔐 Privacy First</h3>
+            <p>
+                <strong>No traditional sign-up required.</strong> AnonNote uses anonymous authentication to
+                create a unique user ID. Your notes are securely stored and only accessible
+                by you. We believe privacy is a fundamental right, not a premium feature.
+            </p>
+        </div>
+
+        <div class="highlight">
+            <h3 style="font-size: 20px; margin-bottom: 15px;">⚙️ How It Works</h3>
+            <p>
+                <strong>Instant & Effortless:</strong> When you open the app, you are automatically signed in
+                anonymously. Your
+                notes are stored securely in the cloud and linked only to your device.
+                Create, edit, and search notes instantly without any friction.
+            </p>
+        </div>
+
+        <div class="highlight">
+            <h3 style="font-size: 20px; margin-bottom: 15px;">🚀 Built With</h3>
+            <p>
+                Flutter • Firebase • Cloud Firestore • Rich Text Editor
+            </p>
+        </div>
+
+        <h2 id="download">📥 Download</h2>
+        <div class="btn-group">
+            <a href="https://anonnote-47650.web.app/" class="btn" target="_blank">
+                💻 Web Version
+            </a>
+            <a href="#" class="btn btn-secondary">
+                📱 Coming Soon on Google Play
+            </a>
+        </div>
+
+        <div class="footer">
+            © 2026 AnonNote. All rights reserved.
+        </div>
+
+    </div>
+
+    <script>
+        // Mobile menu toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const navMenu = document.getElementById('navMenu');
+
+        menuToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+        });
+
+        // Close menu when a link is clicked
+        const navLinks = navMenu.querySelectorAll('a');
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('active');
+            });
+        });
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>
