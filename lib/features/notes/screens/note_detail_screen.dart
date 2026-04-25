@@ -1,16 +1,23 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+// File: lib/features/notes/screens/note_detail_screen.dart
 import 'dart:convert';
+// dart:typed_data is not required here (provided via flutter/foundation)
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../../../l10n/app_localizations.dart';
-import '../helpers/pdf_download_helper.dart';
 import '../helpers/note_pdf_helper.dart';
+import '../helpers/pdf_download_helper.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
 import 'edit_note_screen.dart';
+import '../../../widgets/tag_chip.dart';
+import '../../../widgets/note_content_card.dart';
+import '../../../widgets/top_action_card.dart';
 
 class NoteDetailScreen extends StatefulWidget {
   final NoteModel note;
@@ -24,12 +31,38 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   late NoteModel _note;
   final service = NoteService();
 
+  @override
+  void initState() {
+    super.initState();
+    _note = widget.note;
+  }
+
+  Future<void> _reloadNote() async {
+    try {
+      final fresh = await service.getNoteById(_note.id);
+      if (fresh != null && mounted) {
+        setState(() => _note = fresh);
+      }
+    } catch (_) {
+      // ignore errors
+    }
+  }
+
   String _buildShareUrl(String noteId) {
     if (kIsWeb) {
       final uri = Uri.base;
       return '${uri.scheme}://${uri.authority}/#/share/$noteId';
     }
     return 'https://your-domain.com/#/share/$noteId';
+  }
+
+  Future<void> _copyShareLink() async {
+    final link = _buildShareUrl(_note.id);
+    await Clipboard.setData(ClipboardData(text: link));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Share link copied')));
   }
 
   Future<void> _setPublicState(bool value) async {
@@ -44,66 +77,30 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     );
   }
 
-  Future<void> _copyShareLink() async {
-    final link = _buildShareUrl(_note.id);
-    await Clipboard.setData(ClipboardData(text: link));
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Share link copied')));
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _note = widget.note;
-  }
-
-  Future<void> _reloadNote() async {
-    try {
-      final fresh = await service.getNoteById(_note.id);
-      if (fresh != null) {
-        setState(() => _note = fresh);
-      }
-    } catch (_) {
-      // ignore errors; keep showing existing note
-    }
-  }
-
   Future<void> _previewNotePdf() async {
     final bytes = await buildNotePdf(_note);
     if (!mounted) return;
 
-    // Try to show an in-app preview on web as well. Some browsers/hosts may
-    // not support embedded preview; in that case fall back to download/share.
-    if (kIsWeb) {
-      try {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => Scaffold(
-              appBar: AppBar(title: const Text('PDF Preview')),
-              body: PdfPreview(
-                build: (format) async => bytes,
-                canChangeOrientation: false,
-                canChangePageFormat: false,
-                canDebug: false,
-              ),
-            ),
-          ),
-        );
-        return;
-      } catch (e) {
-        // Preview failed on this platform/context. Fall back to download/share.
-        await _shareOrDownloadNotePdf();
+    // Try web preview helper first (opens new tab on web).
+    try {
+      final ok = await previewPdf(bytes);
+      if (ok) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('PDF opened in new tab')));
         return;
       }
+    } catch (_) {
+      // Fall through to in-app preview
     }
 
-    // Non-web platforms: show native preview.
+    // Fallback: show PdfPreview inside app (mobile)
+    if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('PDF Preview')),
+          appBar: AppBar(title: const Text('PDF Preview'), elevation: 0),
           body: PdfPreview(
             build: (format) async => bytes,
             canChangeOrientation: false,
@@ -120,32 +117,24 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       final bytes = await buildNotePdf(_note);
       final baseName = _note.title.trim().isEmpty
           ? 'note'
-          : _note.title.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_');
+          : _note.title.trim().replaceAll(RegExp(r'[^\wก-๙_-]+'), '_');
       final safeBaseName = baseName.replaceAll(RegExp(r'^_+|_+$'), '');
       final filename = '${safeBaseName.isEmpty ? 'note' : safeBaseName}.pdf';
 
       if (kIsWeb) {
-        try {
-          await Printing.sharePdf(bytes: bytes, filename: filename);
-          if (!mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('PDF ready')));
-          return;
-        } catch (_) {
-          final ok = await downloadFile(
-            bytes,
-            filename,
-            mimeType: 'application/pdf',
-          );
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(ok ? 'PDF downloaded' : 'Unable to download PDF'),
-            ),
-          );
-          return;
-        }
+        // Try to download using platform helper (will trigger download)
+        final ok = await downloadFile(
+          bytes,
+          filename,
+          mimeType: 'application/pdf',
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ok ? 'PDF downloaded' : 'Unable to download PDF'),
+          ),
+        );
+        return;
       }
 
       await Printing.sharePdf(bytes: bytes, filename: filename);
@@ -161,10 +150,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     try {
       final text = buildNoteTextExport(_note);
       final bytes = Uint8List.fromList(utf8.encode(text));
-
       final baseName = _note.title.trim().isEmpty
           ? 'note'
-          : _note.title.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_');
+          : _note.title.trim().replaceAll(RegExp(r'[^\wก-๙_-]+'), '_');
       final safeBaseName = baseName.replaceAll(RegExp(r'^_+|_+$'), '');
       final filename = '${safeBaseName.isEmpty ? 'note' : safeBaseName}.txt';
 
@@ -194,7 +182,74 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
   }
 
-  Future<void> _showExportPdfSheet() async {
+  Widget _buildTopActionCard(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+    final borderColor = colorScheme.onSurface.withAlpha(18);
+    final linkColor = colorScheme.primary;
+    final pdfColor = Colors.red;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: borderColor),
+      ),
+      margin: EdgeInsets.zero,
+      color: theme.cardColor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Public toggle
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            leading: Icon(Icons.link_outlined, color: linkColor),
+            title: const Text(
+              'Public Link',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text('Allow anyone with link to read this note'),
+            trailing: Switch(
+              value: _note.isPublic,
+              onChanged: (v) async {
+                await _setPublicState(v);
+              },
+              activeThumbColor: linkColor,
+            ),
+          ),
+          const Divider(height: 0),
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            leading: Icon(Icons.link, color: linkColor),
+            title: const Text('Copy share link'),
+            subtitle: Text(
+              _note.isPublic
+                  ? _buildShareUrl(_note.id)
+                  : 'Enable Public Link first',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            enabled: _note.isPublic,
+            onTap: _note.isPublic ? _copyShareLink : null,
+          ),
+          const Divider(height: 0),
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            leading: Icon(Icons.picture_as_pdf_outlined, color: pdfColor),
+            title: const Text('Export PDF'),
+            subtitle: const Text('Preview and download/share'),
+            onTap: _previewNotePdf,
+            trailing: IconButton(
+              icon: const Icon(Icons.more_vert_outlined),
+              onPressed: _showExportOptions,
+              tooltip: 'More',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showExportOptions() async {
     if (!mounted) return;
 
     await showModalBottomSheet<void>(
@@ -214,7 +269,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.share_outlined),
+                leading: const Icon(Icons.download_outlined),
                 title: Text(kIsWeb ? 'Download PDF' : 'Share PDF'),
                 onTap: () async {
                   Navigator.pop(sheetContext);
@@ -236,15 +291,34 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     );
   }
 
+  String quillDeltaToPlainText(dynamic content) {
+    if (content is String) return content.trim();
+
+    if (content is! List) return '';
+
+    try {
+      final doc = quill.Document.fromJson(content);
+      return doc.toPlainText().trimRight();
+    } catch (_) {
+      final buffer = StringBuffer();
+      for (final op in content) {
+        if (op is Map && op.containsKey('insert')) {
+          final insert = op['insert'];
+          if (insert is String) buffer.write(insert);
+        }
+      }
+      return buffer.toString().trimRight();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    // Build a controller for the current note content to extract plain text
-    quill.QuillController controller;
+    final theme = Theme.of(context);
+    const contentPadding = EdgeInsets.all(16);
 
-    // Normalize several possible stored shapes for content: List (delta),
-    // Map (e.g. {'ops': [...]}, {'delta': [...]}, or {'insert': ...}),
-    // or plain String. If normalization fails, fall back to an empty controller.
+    // Build quill controller from stored content (support List, Map, String safely)
+    quill.QuillController controller;
     try {
       if (_note.content is List) {
         final doc = quill.Document.fromJson(_note.content as List);
@@ -286,28 +360,38 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       controller = quill.QuillController.basic();
     }
 
+    final isEmpty = controller.document.isEmpty();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_note.title.isEmpty ? t.untitledNote : _note.title),
+        elevation: 0,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        title: Text(
+          _note.title.isEmpty ? t.untitledNote : _note.title,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit',
             onPressed: () async {
-              // Await the edit screen and then refresh the note from server.
-              await Navigator.push(
+              final changed = await Navigator.push<bool?>(
                 context,
                 MaterialPageRoute(builder: (_) => EditNoteScreen(note: _note)),
               );
-              await _reloadNote();
+              if (changed == true) await _reloadNote();
             },
           ),
           IconButton(
-            icon: const Icon(Icons.delete),
+            icon: const Icon(Icons.delete_outline),
             tooltip: t.delete,
             onPressed: () async {
-              // capture NavigatorState/info before showing the dialog to avoid
-              // using BuildContext after an await (use_build_context_synchronously lint)
               final navigator = Navigator.of(context);
               final canPopBeforeDialog = navigator.canPop();
               final ok = await showDialog<bool>(
@@ -327,7 +411,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   ],
                 ),
               );
-
               if (ok == true) {
                 await service.deleteNote(_note.id);
                 if (canPopBeforeDialog) navigator.pop();
@@ -336,65 +419,45 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: contentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Card(
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    title: const Text('Public Link'),
-                    subtitle: const Text(
-                      'Allow anyone with link to read this note',
-                    ),
-                    value: _note.isPublic,
-                    onChanged: _setPublicState,
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.link),
-                    title: const Text('Copy share link'),
-                    subtitle: Text(
-                      _note.isPublic
-                          ? _buildShareUrl(_note.id)
-                          : 'Enable Public Link first',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    enabled: _note.isPublic,
-                    onTap: _note.isPublic ? _copyShareLink : null,
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.file_download_outlined),
-                    title: const Text('Export PDF'),
-                    subtitle: const Text('Preview and download/share'),
-                    onTap: _showExportPdfSheet,
-                  ),
-                ],
+            // Top card with actions
+            TopActionCard(child: _buildTopActionCard(theme)),
+            const SizedBox(height: 12),
+
+            // Tags row
+            if (_note.tags.isNotEmpty)
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _note.tags.map((tag) => TagChip(tag: tag)).toList(),
               ),
+            if (_note.tags.isNotEmpty) const SizedBox(height: 12),
+
+            // Content area
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 240),
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
+              child: isEmpty
+                  ? NoteContentCard(
+                      plainText: null,
+                      isEmpty: true,
+                      key: const ValueKey('empty'),
+                    )
+                  : AbsorbPointer(
+                      absorbing: true,
+                      child: NoteContentCard(
+                        controller: controller,
+                        isEmpty: false,
+                        key: const ValueKey('content'),
+                      ),
+                    ),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: _note.tags.map((t) => Chip(label: Text(t))).toList(),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SingleChildScrollView(
-                  child: SelectableText(
-                    controller.document.toPlainText(),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_quill/flutter_quill.dart' show Document;
 
 import '../models/note_model.dart';
 import '../services/auth_service.dart';
@@ -171,31 +172,26 @@ List<String> _parseTags(dynamic tagsRaw) {
 }
 
 dynamic _toDeltaContent(dynamic rawContent) {
-  // If content already looks like a Quill delta list, return as-is.
   if (rawContent is List) {
     return rawContent;
   }
 
-  // Some JSON exports may include a Map with an 'ops' key or delta-like
-  // structure. Try to normalize that into the expected List format.
   if (rawContent is Map) {
-    // Common shapes: {"ops": [...] } or {"delta": [...] }
-    if (rawContent['ops'] is List) {
-      return rawContent['ops'];
-    }
-    if (rawContent['delta'] is List) {
-      return rawContent['delta'];
-    }
-    // If it's already a map representation of a single insert, convert to list
+    if (rawContent['ops'] is List) return rawContent['ops'];
+    if (rawContent['delta'] is List) return rawContent['delta'];
+
     if (rawContent.containsKey('insert')) {
-      return [rawContent.cast<String, dynamic>()];
+      return [rawContent];
     }
   }
 
   final text = (rawContent ?? '').toString();
-  return <Map<String, String>>[
-    {'insert': text.isEmpty ? '\n' : text},
-  ];
+
+  // Convert plain text into a Quill Document and return its Delta JSON so
+  // imported notes are compatible with flutter_quill editor which expects
+  // a Delta list structure.
+  final doc = Document()..insert(0, text.endsWith('\n') ? text : '$text\n');
+  return doc.toDelta().toJson();
 }
 
 String _baseNameWithoutExtension(String fileName) {

@@ -31,11 +31,14 @@ class AppLocalizations {
       'titleHint': 'Title',
       'tagsHint': 'Tags (comma separated)',
       'save': 'Save',
+      'editNote': 'Edit Note',
       'notes': 'Notes',
       'noNotes': 'No notes yet',
       'searchHint': 'Search notes or tags',
       'filterByTag': 'Filter by tag',
       'errorInit': 'Initialization failed',
+      'locked': 'Locked',
+      'lockedNote': 'Locked note',
     },
     'th': {
       'appTitle': 'แอนอนโน้ต',
@@ -52,11 +55,14 @@ class AppLocalizations {
       'titleHint': 'หัวข้อ',
       'tagsHint': 'แท็ก (คั่นด้วยเครื่องหมายจุลภาค)',
       'save': 'บันทึก',
+      'editNote': 'แก้ไขบันทึก',
       'notes': 'บันทึก',
       'noNotes': 'ยังไม่มีบันทึก',
       'searchHint': 'ค้นหาบันทึกหรือแท็ก',
       'filterByTag': 'กรองตามแท็ก',
       'errorInit': 'การเริ่มต้นล้มเหลว',
+      'locked': 'ล็อก',
+      'lockedNote': 'บันทึกถูกล็อก',
     },
   };
 
@@ -70,6 +76,7 @@ class AppLocalizations {
   String get heroSubtitle => _translate('heroSubtitle');
   String get createNoteCTA => _translate('createNoteCTA');
   String get searchHint => _translate('searchHint');
+  String get editNote => _translate('editNote');
   String get filterByTag => _translate('filterByTag');
   String get settings => _translate('settings');
   String get light => _translate('light');
@@ -79,6 +86,8 @@ class AppLocalizations {
   String get add => _translate('add');
   String get delete => _translate('delete');
   String get errorInit => _translate('errorInit');
+  String get locked => _translate('locked');
+  String get lockedNote => _translate('lockedNote');
 
   String _translate(String key) {
     final languageCode = locale.languageCode;

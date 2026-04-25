@@ -41,7 +41,11 @@ Future<pw.Font> _loadThaiFont() async {
   for (final path in candidates) {
     try {
       final data = await rootBundle.load(path);
-      return pw.Font.ttf(data);
+      // Ensure we pass a Uint8List to the PDF font loader - this is more
+      // compatible across platforms (especially web).
+      final bytes = data.buffer.asUint8List();
+      final byteData = ByteData.view(bytes.buffer);
+      return pw.Font.ttf(byteData);
     } catch (_) {
       // Try next candidate.
     }

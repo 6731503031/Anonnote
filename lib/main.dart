@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'features/security/screens/pin_lock_screen.dart';
 import 'features/security/services/pin_lock_service.dart';
 import 'features/notes/screens/share_note_screen.dart';
+import 'theme/app_theme.dart';
 // debug badge removed for production
 
 // Global key to access app-level state (theme/locale) from small settings UI.
@@ -229,35 +230,11 @@ class MyAppState extends State<MyApp> {
         }
         return supportedLocales.first;
       },
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
+      theme: AppTheme.light().copyWith(
         inputDecorationTheme: const InputDecorationTheme(filled: true),
-        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
-        cardTheme: CardThemeData(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
+      darkTheme: AppTheme.dark().copyWith(
         inputDecorationTheme: const InputDecorationTheme(filled: true),
-        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
       ),
       themeMode: themeMode,
       home: home,

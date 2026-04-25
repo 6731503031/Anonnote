@@ -8,6 +8,8 @@ class NoteModel {
   final bool isHidden;
   final bool isFavorite;
   final bool isPublic;
+  // Optional color stored as hex string (e.g. '#F6F8FF') for note color tint
+  final String? colorHex;
 
   NoteModel({
     required this.id,
@@ -19,6 +21,7 @@ class NoteModel {
     this.isHidden = false,
     this.isFavorite = false,
     this.isPublic = false,
+    this.colorHex,
   });
 
   NoteModel copyWith({
@@ -31,6 +34,7 @@ class NoteModel {
     bool? isHidden,
     bool? isFavorite,
     bool? isPublic,
+    String? colorHex,
   }) {
     return NoteModel(
       id: id ?? this.id,
@@ -42,6 +46,7 @@ class NoteModel {
       isHidden: isHidden ?? this.isHidden,
       isFavorite: isFavorite ?? this.isFavorite,
       isPublic: isPublic ?? this.isPublic,
+      colorHex: colorHex ?? this.colorHex,
     );
   }
 
@@ -61,6 +66,7 @@ class NoteModel {
       'isHidden': isHidden,
       'isFavorite': isFavorite,
       'isPublic': isPublic,
+      'colorHex': colorHex,
     };
   }
 
@@ -89,6 +95,7 @@ class NoteModel {
       isHidden: map['isHidden'] == true,
       isFavorite: map['isFavorite'] == true,
       isPublic: map['isPublic'] == true,
+      colorHex: map['colorHex'] as String?,
     );
   }
 }

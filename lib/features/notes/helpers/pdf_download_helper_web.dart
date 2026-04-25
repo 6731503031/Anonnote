@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'dart:convert';
 import 'package:universal_html/html.dart' as html;
 
 Future<bool> downloadFile(
@@ -7,17 +6,24 @@ Future<bool> downloadFile(
   String filename, {
   String mimeType = 'application/octet-stream',
 }) async {
+  final blob = html.Blob([bytes], mimeType);
+  final url = html.Url.createObjectUrlFromBlob(blob);
+
+  html.AnchorElement(href: url)
+    ..setAttribute("download", filename)
+    ..click();
+
+  html.Url.revokeObjectUrl(url);
+  return true;
+}
+
+Future<bool> previewPdf(Uint8List bytes) async {
   try {
-    final base64 = base64Encode(bytes);
-    final dataUrl = 'data:$mimeType;base64,$base64';
-
-    final anchor = html.AnchorElement(href: dataUrl)
-      ..download = filename
-      ..style.display = 'none';
-
-    html.document.body?.children.add(anchor);
-    anchor.click();
-    anchor.remove();
+    final blob = html.Blob([bytes], 'application/pdf');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    // Open in a new tab for preview
+    html.window.open(url, '_blank');
+    // Note: do not revoke immediately; browsers will revoke when tab is closed
     return true;
   } catch (_) {
     return false;
