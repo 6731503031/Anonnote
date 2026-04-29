@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 import '../../../l10n/app_localizations.dart';
-import '../models/note_model.dart';
-import '../services/note_service.dart';
+import '../models/shared_note_model.dart';
+import '../services/shared_note_service.dart';
 
 class ShareNoteScreen extends StatelessWidget {
   const ShareNoteScreen({super.key, required this.noteId});
@@ -37,12 +37,12 @@ class ShareNoteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final service = NoteService();
+    final service = SharedNoteService();
 
     return Scaffold(
       appBar: AppBar(title: Text('Shared Note')),
-      body: FutureBuilder<NoteModel?>(
-        future: service.getPublicNoteById(noteId),
+      body: FutureBuilder<SharedNoteModel?>(
+        future: service.getSharedNoteById(noteId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -70,33 +70,33 @@ class ShareNoteScreen extends StatelessWidget {
             );
           }
 
-          final note = snapshot.data;
-          if (note == null) {
+          final shared = snapshot.data;
+          if (shared == null) {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(
-                  'This note is private or no longer available.',
+                  'This shared note is private or no longer available.',
                   textAlign: TextAlign.center,
                 ),
               ),
             );
           }
 
-          final controller = _buildController(note.content);
+          final controller = _buildController(shared.content);
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  note.title.isEmpty ? t.untitledNote : note.title,
+                  shared.title.isEmpty ? t.untitledNote : shared.title,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
-                  children: note.tags
+                  children: shared.tags
                       .map((tag) => Chip(label: Text(tag)))
                       .toList(),
                 ),

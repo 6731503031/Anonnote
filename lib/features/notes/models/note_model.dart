@@ -8,6 +8,8 @@ class NoteModel {
   final bool isHidden;
   final bool isFavorite;
   final bool isPublic;
+  final String? sharedNoteId;
+  final DateTime? sharedExpiresAt;
   // Optional color stored as hex string (e.g. '#F6F8FF') for note color tint
   final String? colorHex;
 
@@ -21,6 +23,8 @@ class NoteModel {
     this.isHidden = false,
     this.isFavorite = false,
     this.isPublic = false,
+    this.sharedNoteId,
+    this.sharedExpiresAt,
     this.colorHex,
   });
 
@@ -34,6 +38,8 @@ class NoteModel {
     bool? isHidden,
     bool? isFavorite,
     bool? isPublic,
+    String? sharedNoteId,
+    DateTime? sharedExpiresAt,
     String? colorHex,
   }) {
     return NoteModel(
@@ -46,6 +52,8 @@ class NoteModel {
       isHidden: isHidden ?? this.isHidden,
       isFavorite: isFavorite ?? this.isFavorite,
       isPublic: isPublic ?? this.isPublic,
+      sharedNoteId: sharedNoteId ?? this.sharedNoteId,
+      sharedExpiresAt: sharedExpiresAt ?? this.sharedExpiresAt,
       colorHex: colorHex ?? this.colorHex,
     );
   }
@@ -66,6 +74,8 @@ class NoteModel {
       'isHidden': isHidden,
       'isFavorite': isFavorite,
       'isPublic': isPublic,
+      'sharedNoteId': sharedNoteId,
+      'sharedExpiresAt': sharedExpiresAt,
       'colorHex': colorHex,
     };
   }
@@ -85,6 +95,13 @@ class NoteModel {
         ? expireAtRaw
         : expireAtRaw.toDate();
 
+    final dynamic sharedExpiresAtRaw = map['sharedExpiresAt'];
+    final DateTime? sharedExpiresAt = sharedExpiresAtRaw == null
+        ? null
+        : sharedExpiresAtRaw is DateTime
+        ? sharedExpiresAtRaw
+        : sharedExpiresAtRaw.toDate();
+
     return NoteModel(
       id: id,
       title: map['title'] ?? '',
@@ -95,6 +112,8 @@ class NoteModel {
       isHidden: map['isHidden'] == true,
       isFavorite: map['isFavorite'] == true,
       isPublic: map['isPublic'] == true,
+      sharedNoteId: map['sharedNoteId'] as String?,
+      sharedExpiresAt: sharedExpiresAt,
       colorHex: map['colorHex'] as String?,
     );
   }

@@ -14,6 +14,7 @@ import '../helpers/note_pdf_helper.dart';
 import '../helpers/pdf_download_helper.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
+import '../services/shared_note_service.dart';
 import 'edit_note_screen.dart';
 import '../../../widgets/tag_chip.dart';
 import '../../../widgets/note_content_card.dart';
@@ -30,6 +31,7 @@ class NoteDetailScreen extends StatefulWidget {
 class _NoteDetailScreenState extends State<NoteDetailScreen> {
   late NoteModel _note;
   final service = NoteService();
+  final sharedService = SharedNoteService();
 
   @override
   void initState() {
@@ -48,28 +50,72 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
   }
 
-  String _buildShareUrl(String noteId) {
-    if (kIsWeb) {
-      final uri = Uri.base;
-      return '${uri.scheme}://${uri.authority}/#/share/$noteId';
-    }
-    return 'https://your-domain.com/#/share/$noteId';
+  String _buildShareUrl(String sharedId) {
+    return sharedService.buildShareUrl(sharedId);
   }
 
-  Future<void> _copyShareLink() async {
-    final link = _buildShareUrl(_note.id);
+  Future<void> _shareLink() async {
+    final sharedId = _note.sharedNoteId;
+    if (sharedId == null || sharedId.isEmpty) return;
+    final link = _buildShareUrl(sharedId);
     await Clipboard.setData(ClipboardData(text: link));
+    await Share.share(
+      link,
+      subject: _note.title.isEmpty ? 'AnonNote' : _note.title,
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Share link copied')));
+    ).showSnackBar(const SnackBar(content: Text('Share link ready')));
   }
 
   Future<void> _setPublicState(bool value) async {
-    final updated = _note.copyWith(isPublic: value);
-    await service.updateNote(updated);
+    if (value) {
+      final expiresAt = _note.sharedExpiresAt ?? _note.expireAt;
+      final sharedId = _note.sharedNoteId;
+      if (sharedId == null || sharedId.isEmpty) {
+        final createdId = await sharedService.createSharedNote(
+          _note,
+          expiresAt: expiresAt,
+        );
+        final updated = _note.copyWith(
+          isPublic: true,
+          sharedNoteId: createdId,
+          sharedExpiresAt: expiresAt,
+        );
+        await service.updateNote(updated);
+        if (!mounted) return;
+        setState(() => _note = updated);
+      } else {
+        await sharedService.updateSharedNote(
+          sharedId,
+          _note,
+          expiresAt: expiresAt,
+        );
+        final updated = _note.copyWith(
+          isPublic: true,
+          sharedExpiresAt: expiresAt,
+        );
+        await service.updateNote(updated);
+        if (!mounted) return;
+        setState(() => _note = updated);
+      }
+    } else {
+      final sharedId = _note.sharedNoteId;
+      if (sharedId != null && sharedId.isNotEmpty) {
+        await sharedService.deleteSharedNote(sharedId);
+      }
+      final updated = _note.copyWith(
+        isPublic: false,
+        sharedNoteId: null,
+        sharedExpiresAt: null,
+      );
+      await service.updateNote(updated);
+      if (!mounted) return;
+      setState(() => _note = updated);
+    }
+
     if (!mounted) return;
-    setState(() => _note = updated);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(value ? 'Public link enabled' : 'Public link disabled'),
@@ -220,16 +266,16 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             leading: Icon(Icons.link, color: linkColor),
-            title: const Text('Copy share link'),
+            title: const Text('Share link'),
             subtitle: Text(
-              _note.isPublic
-                  ? _buildShareUrl(_note.id)
+              _note.isPublic && _note.sharedNoteId != null
+                  ? _buildShareUrl(_note.sharedNoteId!)
                   : 'Enable Public Link first',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             enabled: _note.isPublic,
-            onTap: _note.isPublic ? _copyShareLink : null,
+            onTap: _note.isPublic ? _shareLink : null,
           ),
           const Divider(height: 0),
           ListTile(

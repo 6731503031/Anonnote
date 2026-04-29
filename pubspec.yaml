@@ -2,7 +2,7 @@
 description: "AnonNote - Anonymous Note Taking App"
 publish_to: 'none'
 
-version: 1.0.1+3
+version: 1.0.3+6
 
 environment:
   sdk: ^3.11.0
@@ -31,7 +31,7 @@ dependencies:
 
   # Export / Share
   pdf: ^3.11.3
-  printing: ^5.14.2
+  printing: ^5.14.3
   share_plus: ^10.0.3
 
   # Web support
@@ -49,7 +49,7 @@ flutter:
 
   assets:
     - assets/logo.png
-    
+
   fonts:
     - family: NotoSansThai
       fonts:

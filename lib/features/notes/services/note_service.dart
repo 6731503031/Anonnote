@@ -28,6 +28,10 @@ class NoteService {
       'isHidden': note.isHidden,
       'isFavorite': note.isFavorite,
       'isPublic': note.isPublic,
+      'sharedNoteId': note.sharedNoteId,
+      'sharedExpiresAt': note.sharedExpiresAt != null
+          ? Timestamp.fromDate(note.sharedExpiresAt!)
+          : null,
     };
 
     // Payload logging removed for production.
@@ -147,6 +151,10 @@ class NoteService {
       'isHidden': note.isHidden,
       'isFavorite': note.isFavorite,
       'isPublic': note.isPublic,
+      'sharedNoteId': note.sharedNoteId,
+      'sharedExpiresAt': note.sharedExpiresAt != null
+          ? Timestamp.fromDate(note.sharedExpiresAt!)
+          : null,
     });
   }
 }

@@ -41,5 +41,23 @@ service cloud.firestore {
             && (!request.resource.data.keys().hasAny(['createdAt']) || request.resource.data.createdAt == resource.data.createdAt)
            );
     }
+
+    match /shared_notes/{sharedId} {
+      allow create: if request.auth != null
+        && request.resource != null
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow update: if request.auth != null
+        && resource != null
+        && resource.data.ownerId == request.auth.uid;
+
+      allow delete: if request.auth != null
+        && resource != null
+        && resource.data.ownerId == request.auth.uid;
+
+      allow get, list: if resource != null
+        && resource.data.isPublic == true
+        && (resource.data.expiresAt == null || resource.data.expiresAt > request.time);
+    }
   }
 }

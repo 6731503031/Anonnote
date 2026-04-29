@@ -235,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(18),
                           child: Image.asset(
-                            'web/logo.png',
+                            'assets/logo.png',
                             width: 72,
                             height: 72,
                             fit: BoxFit.cover,
@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.asset(
-                        'web/logo.png',
+                        'assets/logo.png',
                         width: 28,
                         height: 28,
                         fit: BoxFit.cover,
@@ -556,6 +556,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CreateNoteScreen()),
+        ),
+        icon: const Icon(Icons.add),
+        label: Text(t.createNoteCTA),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
